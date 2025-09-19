@@ -41,9 +41,9 @@
 | [SUSFS4](https://gitlab.com/simonpunk/susfs4ksu) | 在内核层面辅助KSU隐藏的功能补丁 |
 | [LZ4KD](https://github.com/ShirkNeko/SukiSU_patch/tree/main/other) | 听说是来自HUAWEI source的ZRAM算法，补丁由[云彩之枫](http://www.coolapk.com/u/24963680)移植 |
 | [LZ4 1.10.0](https://github.com/lz4/lz4/releasesr) | GKI内核默认的LZ4算法升级 |
-| BBR | 添加BBR多种算法 |
-| 代理优化 | |
-| o3编译优化 | |
+| BBR | BBR/Brutal 及一系列 tcp 拥塞控制算法 |
+| 代理优化 | 一些网络连接性能优化配置选项 |
+| o3编译优化 | 优化内核运行 |
 | 内核级基带保护 | 加入内核防格基带保护(By [@showdo](https://github.com/showdo))，有效防止恶意格机脚本/程序对系统分区数据的破坏 |
 
 <details>
