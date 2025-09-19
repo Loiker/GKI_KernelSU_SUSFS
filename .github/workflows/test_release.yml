@@ -167,10 +167,12 @@ jobs:
         ${{ inputs.use_kpm && '-> KPM 支持' || '' }}
         -> **LZ4KD&ONEPLUS_LZ4K**  ${{ inputs.use_zram && '支持' || '不支持' }}
         -> lz4: v1.10.0
+        -> o3编译优化
         -> BBR/Brutal 及一系列 tcp 拥塞控制算法
         -> 添加代理性能优化
         -> 启用内核级基带保护 @Showdo
 (https://github.com/showdo)
+        -> PS:由于项目内核为自用，兼容性不保证，有问题请勿反馈
 
         模块: 
         -> https://github.com/sidex15/ksu_module_susfs
