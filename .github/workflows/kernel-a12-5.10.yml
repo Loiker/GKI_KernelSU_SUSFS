@@ -80,12 +80,18 @@ jobs:
        # - sub_level: "218"
        #   os_patch_level: "2024-08"
        #   revision: "r14"
+       # mi12sp原子版本号
         - sub_level: "226"
           os_patch_level: "2024-11"
           revision: "r8"
-       # - sub_level: "X"
-       #   os_patch_level: "lts"
-       #   revision: "r1"
+       # gki最新维护版本
+        - sub_level: "233"
+          os_patch_level: "2025-02"
+          revision: "r3"
+       # 长期支持，最新版本。有bug风险
+        - sub_level: "X"
+          os_patch_level: "lts"
+          revision: "r1"
     uses: ./.github/workflows/gki-kernel.yml
     secrets: inherit
     with:
