@@ -167,6 +167,12 @@ jobs:
         ${{ inputs.use_kpm && '-> KPM 支持' || '' }}
         -> **LZ4KD&ONEPLUS_LZ4K**  ${{ inputs.use_zram && '开启' || '未开启' }}
         -> lz4: v1.10.0 ${{ inputs.use_zram && '开启' || '未开启' }}
+        -> o3编译优化，改善内核运行性能
+        -> Re:Kernel支持，与Freezer，NoActive等软件配合降低功耗
+        -> 网络连接性能优化,加入 BBR/Brutal 及一系列 tcp 拥塞控制算法
+        -> 三星SSG IO调度器移植
+        -> 内核防格基带保护(By [@showdo](https://github.com/showdo))，有效防止恶意格机脚本/程序对系统分区数据的破坏
+        -> PS: 由于项目内核为自用，兼容性不保证，有问题请勿反馈
         
         模块: 
         -> https://github.com/sidex15/ksu_module_susfs
