@@ -35,9 +35,6 @@ on:
         required: true
         type: boolean
         default: false
-      revision:
-        required: false
-        type: string
       version:
         required: false
         type: string
@@ -744,49 +741,56 @@ jobs:
           echo "更改为配置目录: $CONFIG..."
           cd bootimgs
 
-          GKI_URL=https://dl.google.com/android/gki/gki-certified-boot-android12-5.10-"${{ inputs.os_patch_level }}"_"${{ inputs.revision }}".zip
-          FALLBACK_URL=https://dl.google.com/android/gki/gki-certified-boot-android12-5.10-2023-01_r1.zip
+          ANDROID_VERSION=${{ inputs.android_version }}
+          PATCH_LEVEL=${{ inputs.os_patch_level }}
+          REVISION=$(curl -s https://android.googlesource.com/kernel/common/+refs | grep -oE "${ANDROID_VERSION}-5.10-${PATCH_LEVEL}(_r[0-9]+)?" | sort -V | uniq | tail -n 1 | sed 's/.*_r//')
+          
+          if [ -n "$REVISION" ]; then
+              REVISION="_r${REVISION}"
+          else
+              REVISION="_r1"
+          fi
+        
+          GKI_URL="https://dl.google.com/android/gki/gki-certified-boot-${ANDROID_VERSION}-5.10-${PATCH_LEVEL}${REVISION}.zip"
+          FALLBACK_URL="https://dl.google.com/android/gki/gki-certified-boot-android12-5.10-2023-01_r1.zip"
 
-          # Check if the GKI URL is available
           echo "Checking if GKI kernel URL is reachable: $GKI_URL"
           status=$(curl -sL -w "%{http_code}" "$GKI_URL" -o /dev/null)
 
           if [ "$status" = "200" ]; then
-              echo "[+] Downloading from GKI_URL"
+              echo "[+] Downloading from GKI_URL: $GKI_URL"
               curl -Lo gki-kernel.zip "$GKI_URL"
           else
-              echo "[+] $GKI_URL not found, using $FALLBACK_URL"
+              echo "[!] $GKI_URL not found, using fallback: $FALLBACK_URL"
               curl -Lo gki-kernel.zip "$FALLBACK_URL"
           fi
 
-          # Unzip the downloaded kernel and remove the zip
           echo "Unzipping the downloaded kernel..."
-          unzip gki-kernel.zip && rm gki-kernel.zip
+          unzip -q gki-kernel.zip && rm gki-kernel.zip
 
           echo "Unpacking boot.img..."
           FULL_PATH=$(pwd)/boot-5.10.img
           echo "Unpacking using: $FULL_PATH"
-
-          echo "Running unpack_bootimg.py..."
           $UNPACK_BOOTIMG --boot_img="$FULL_PATH"
 
           echo "Building Image.gz"
           gzip -n -k -f -9 ./Image > ./Image.gz
 
           echo "Building boot.img"
-          $MKBOOTIMG --header_version 4 --kernel Image --output boot.img --ramdisk out/ramdisk --os_version 12.0.0 --os_patch_level "${{ inputs.os_patch_level }}"
+          $MKBOOTIMG --header_version 4 --kernel Image --output boot.img --ramdisk out/ramdisk --os_version 12.0.0 --os_patch_level "$PATCH_LEVEL"
           $AVBTOOL add_hash_footer --partition_name boot --partition_size $((64 * 1024 * 1024)) --image boot.img --algorithm SHA256_RSA2048 --key $BOOT_SIGN_KEY_PATH
-          cp ./boot.img ../${{ inputs.android_version }}-${{ inputs.kernel_version }}.${{ inputs.sub_level }}-${{ inputs.os_patch_level }}-boot.img
+          cp ./boot.img ../${ANDROID_VERSION}-${{ inputs.kernel_version }}.${{ inputs.sub_level }}-${PATCH_LEVEL}-boot.img
 
           echo "Building boot-gz.img"
-          $MKBOOTIMG --header_version 4 --kernel Image.gz --output boot-gz.img --ramdisk out/ramdisk --os_version 12.0.0 --os_patch_level "${{ inputs.os_patch_level }}"
+          $MKBOOTIMG --header_version 4 --kernel Image.gz --output boot-gz.img --ramdisk out/ramdisk --os_version 12.0.0 --os_patch_level "$PATCH_LEVEL"
           $AVBTOOL add_hash_footer --partition_name boot --partition_size $((64 * 1024 * 1024)) --image boot-gz.img --algorithm SHA256_RSA2048 --key $BOOT_SIGN_KEY_PATH
-          cp ./boot-gz.img ../${{ inputs.android_version }}-${{ inputs.kernel_version }}.${{ inputs.sub_level }}-${{ inputs.os_patch_level }}-boot-gz.img
+          cp ./boot-gz.img ../${ANDROID_VERSION}-${{ inputs.kernel_version }}.${{ inputs.sub_level }}-${PATCH_LEVEL}-boot-gz.img
 
           echo "Building boot-lz4.img"
-          $MKBOOTIMG --header_version 4 --kernel Image.lz4 --output boot-lz4.img --ramdisk out/ramdisk --os_version 12.0.0 --os_patch_level "${{ inputs.os_patch_level }}"
+          $MKBOOTIMG --header_version 4 --kernel Image.lz4 --output boot-lz4.img --ramdisk out/ramdisk --os_version 12.0.0 --os_patch_level "$PATCH_LEVEL"
           $AVBTOOL add_hash_footer --partition_name boot --partition_size $((64 * 1024 * 1024)) --image boot-lz4.img --algorithm SHA256_RSA2048 --key $BOOT_SIGN_KEY_PATH
-          cp ./boot-lz4.img ../${{ inputs.android_version }}-${{ inputs.kernel_version }}.${{ inputs.sub_level }}-${{ inputs.os_patch_level }}-boot-lz4.img
+          cp ./boot-lz4.img ../${ANDROID_VERSION}-${{ inputs.kernel_version }}.${{ inputs.sub_level }}-${PATCH_LEVEL}-boot-lz4.img
+
 
       - name: 运行boot镜像 ${{ inputs.android_version }} 编译脚本
         if: ${{ inputs.android_version == 'android13' || inputs.android_version == 'android14' || inputs.android_version == 'android15' }}

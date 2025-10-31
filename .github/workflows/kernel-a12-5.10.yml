@@ -81,13 +81,13 @@ jobs:
         #  revision: "r14"
         - sub_level: "226"
           os_patch_level: "2024-11"
-          revision: "r8"
+          # revision: "r8"
         - sub_level: "233"
           os_patch_level: "2025-02"
-          revision: "r1"
+          # revision: "r1"
         - sub_level: "236"
           os_patch_level: "2025-05"
-          revision: "r1"
+          # revision: "r1"
         - sub_level: "X"
           os_patch_level: "lts"
     uses: ./.github/workflows/gki-kernel.yml
@@ -98,7 +98,7 @@ jobs:
       kernel_version: "5.10"
       sub_level: ${{ matrix.sub_level }}
       os_patch_level: ${{ matrix.os_patch_level }}
-      revision: ${{ matrix.revision }}
+      # revision: ${{ matrix.revision }}
       kernelsu_variant: ${{ inputs.kernelsu_variant || 'Next' }}
       kernelsu_branch: ${{ inputs.kernelsu_branch || 'Dev' }}
       # kernelsu_branch_other: ${{ inputs.kernelsu_branch_other || '' }}
