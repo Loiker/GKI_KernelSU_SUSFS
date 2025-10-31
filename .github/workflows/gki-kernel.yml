@@ -750,10 +750,17 @@ jobs:
           else
               REVISION="_r1"
           fi
-        
-          GKI_URL="https://dl.google.com/android/gki/gki-certified-boot-${ANDROID_VERSION}-5.10-${PATCH_LEVEL}${REVISION}.zip"
-          FALLBACK_URL="https://dl.google.com/android/gki/gki-certified-boot-android12-5.10-2023-01_r1.zip"
 
+          last_rev=$(curl -s https://android.googlesource.com/kernel/common/+refs | grep -oE 'android12-5\.10-[0-9]{4}-[0-9]{2}(_r[0-9]+)?' | sort -V | uniq | tail -n 1)
+
+          if [ -z "$last_rev" ]; then
+            FALLBACK_URL="https://dl.google.com/android/gki/gki-certified-boot-${last_rev}.zip"
+          else
+            FALLBACK_URL="https://dl.google.com/android/gki/gki-certified-boot-android12-5.10-2025-09_r1.zip"
+          fi
+
+          GKI_URL="https://dl.google.com/android/gki/gki-certified-boot-${ANDROID_VERSION}-5.10-${PATCH_LEVEL}${REVISION}.zip"
+          
           echo "Checking if GKI kernel URL is reachable: $GKI_URL"
           status=$(curl -sL -w "%{http_code}" "$GKI_URL" -o /dev/null)
 
