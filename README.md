@@ -2,6 +2,13 @@
 
 > 一加用户可以fork本项目后自行使用action中Build OnePlus SukiSU Ultra 构建
 >
+---
+
+> 2025/11/6 UTC+8:
+> [KernelSU](https://github.com/tiann/KernelSU)和[MKSU](https://github.com/5ec1cff/KernelSU)现在已修复LKM侧信道攻击问题
+> 建议使用以上两个管理器的LKM模式
+
+
 
 ### 下载
 可以[在此](https://github.com/zzh20188/GKI_KernelSU_SUSFS/releases)下载您的资源
