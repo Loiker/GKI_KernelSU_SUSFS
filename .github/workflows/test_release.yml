@@ -175,6 +175,9 @@ jobs:
         ${{ inputs.use_kpm && '-> KPM 支持' || '' }}
         -> **LZ4KD&ONEPLUS_LZ4K**  ${{ inputs.use_zram && '开启' || '未开启' }}
         -> lz4: v1.10.0 ${{ inputs.use_zram && '开启' || '未开启' }}
+        -> 添加bbr多种TCP拥塞(未默认启用)
+        -> 添加代理网络优化
+        -> 启用O2编译优化，提升运行性能。
         
         模块: 
         -> https://github.com/sidex15/ksu_module_susfs
