@@ -562,6 +562,55 @@ jobs:
           echo "CONFIG_TCP_CONG_WESTWOOD=y" >> ./common/arch/arm64/configs/gki_defconfig
           echo "CONFIG_TCP_CONG_HTCP=n" >> ./common/arch/arm64/configs/gki_defconfig
 
+      - name: TCP 拥塞控制 & 轻量网络补充配置
+        run: |
+          cd "$CONFIG"
+          DEFCONFIG=./common/arch/arm64/configs/gki_defconfig
+
+          echo "当前 defconfig 路径: $DEFCONFIG"
+
+          # 小工具函数：如果已有同名项就覆盖，没有就追加，避免重复越来越多
+          add_config() {
+            key="$1"
+            val="$2"
+            if grep -q "^${key}=" "$DEFCONFIG"; then
+              sed -i "s/^${key}=.*/${key}=${val}/" "$DEFCONFIG"
+            else
+              echo "${key}=${val}" >> "$DEFCONFIG"
+            fi
+          }
+
+          echo "=== 启用高级 TCP 拥塞控制 + 常用算法（默认仍为 CUBIC） ==="
+          # 打开高级拥塞控制框架
+          add_config CONFIG_TCP_CONG_ADVANCED y
+
+          # 常用算法启用（通过 sysctl 或你自己的脚本切换，默认不改）
+          add_config CONFIG_TCP_CONG_CUBIC y
+          add_config CONFIG_TCP_CONG_BBR y
+          add_config CONFIG_TCP_CONG_WESTWOOD y
+          add_config CONFIG_TCP_CONG_VEGAS y
+          add_config CONFIG_TCP_CONG_NV y
+          add_config CONFIG_TCP_CONG_HTCP y
+          add_config CONFIG_TCP_CONG_BRUTAL y
+
+          # 不再编译过时的 BIC（可选）
+          add_config CONFIG_TCP_CONG_BIC n
+
+          # BBR 推荐的 FQ 队列调度器支持
+          add_config CONFIG_NET_SCH_FQ y
+
+          echo "=== 启用轻量网络补充（fq_codel / ingress / clsact） ==="
+          # fq_codel：更好的排队 / bufferbloat 控制（很多系统自带，强制确保为 y）
+          add_config CONFIG_NET_SCH_FQ_CODEL y
+
+          # ingress qdisc + clsact：给将来 tc / 过滤器留扩展空间，属于轻量基础支持
+          add_config CONFIG_NET_SCH_INGRESS y
+          add_config CONFIG_NET_CLS_ACT y
+
+          echo "TCP / 网络相关 defconfig 已更新完成："
+          grep -E 'CONFIG_TCP_CONG_|CONFIG_NET_SCH_FQ|CONFIG_NET_SCH_FQ_CODEL|CONFIG_NET_SCH_INGRESS|CONFIG_NET_CLS_ACT' "$DEFCONFIG" || true
+
+
 
       - name: 添加代理性能优化
         run: |
