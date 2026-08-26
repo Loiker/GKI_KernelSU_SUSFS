@@ -929,6 +929,287 @@ jobs:
           grep -q '^CONFIG_REKERNEL=y$' "$DEFCONFIG" || echo "CONFIG_REKERNEL=y" >> "$DEFCONFIG"
           grep -q '^CONFIG_REKERNEL_NETWORK=y$' "$DEFCONFIG" || echo "CONFIG_REKERNEL_NETWORK=y" >> "$DEFCONFIG"
 
+
+
+      - name: TCP 拥塞控制 & 轻量网络补充配置
+        run: |
+          set -euo pipefail
+
+          cd "$CONFIG"
+          DEFCONFIG=./common/arch/arm64/configs/gki_defconfig
+          SYMBOL_INDEX=./.kconfig-symbols
+
+          echo "当前 defconfig 路径: $DEFCONFIG"
+
+          if [ ! -f "$DEFCONFIG" ]; then
+            echo "::error::找不到 defconfig: $DEFCONFIG"
+            exit 1
+          fi
+
+          find ./common -type f -name 'Kconfig*' \
+            -exec awk '$1=="config" || $1=="menuconfig" {print $2}' {} + \
+            | sort -u > "$SYMBOL_INDEX"
+
+          set_config() {
+            local key="$1"
+            local val="$2"
+            local symbol="${key#CONFIG_}"
+
+            if ! grep -qxF "$symbol" "$SYMBOL_INDEX"; then
+              echo "[SKIP] $key 当前内核不存在"
+              return 0
+            fi
+
+            sed -i \
+              -e "/^${key}=.*/d" \
+              -e "/^# ${key} is not set$/d" \
+              "$DEFCONFIG"
+
+            if [ "$val" = "n" ]; then
+              echo "# ${key} is not set" >> "$DEFCONFIG"
+              echo "[OFF ] $key"
+            else
+              echo "${key}=${val}" >> "$DEFCONFIG"
+              echo "[ ON ] $key=$val"
+            fi
+          }
+
+          echo "=== TCP 拥塞控制优化 ==="
+
+          set_config CONFIG_TCP_CONG_ADVANCED y
+
+          set_config CONFIG_TCP_CONG_CUBIC y
+          set_config CONFIG_TCP_CONG_BBR y
+          set_config CONFIG_TCP_CONG_WESTWOOD y
+          set_config CONFIG_TCP_CONG_VEGAS y
+          set_config CONFIG_TCP_CONG_NV y
+          set_config CONFIG_TCP_CONG_HTCP y
+          set_config CONFIG_TCP_CONG_BRUTAL y
+
+          set_config CONFIG_TCP_CONG_BIC n
+
+          echo "=== 网络队列调度优化 ==="
+
+          set_config CONFIG_NET_SCHED y
+          set_config CONFIG_NET_SCH_FQ y
+          set_config CONFIG_NET_SCH_FQ_CODEL y
+          set_config CONFIG_NET_SCH_INGRESS y
+          set_config CONFIG_NET_CLS_ACT y
+
+          echo "=== TCP / 网络配置完成 ==="
+
+          grep -E \
+            'CONFIG_TCP_CONG_|CONFIG_NET_SCHED|CONFIG_NET_SCH_FQ|CONFIG_NET_SCH_FQ_CODEL|CONFIG_NET_SCH_INGRESS|CONFIG_NET_CLS_ACT' \
+            "$DEFCONFIG" || true
+
+
+      - name: 添加代理性能优化
+        run: |
+          set -euo pipefail
+
+          cd "$CONFIG"
+          DEFCONFIG=./common/arch/arm64/configs/gki_defconfig
+          SYMBOL_INDEX=./.kconfig-symbols
+
+          echo "当前 defconfig 路径: $DEFCONFIG"
+
+          if [ ! -f "$DEFCONFIG" ]; then
+            echo "::error::找不到 defconfig: $DEFCONFIG"
+            exit 1
+          fi
+
+          if [ ! -s "$SYMBOL_INDEX" ]; then
+            find ./common -type f -name 'Kconfig*' \
+              -exec awk '$1=="config" || $1=="menuconfig" {print $2}' {} + \
+              | sort -u > "$SYMBOL_INDEX"
+          fi
+
+          set_config() {
+            local key="$1"
+            local val="$2"
+            local symbol="${key#CONFIG_}"
+
+            if ! grep -qxF "$symbol" "$SYMBOL_INDEX"; then
+              echo "[SKIP] $key 当前内核不存在"
+              return 0
+            fi
+
+            sed -i \
+              -e "/^${key}=.*/d" \
+              -e "/^# ${key} is not set$/d" \
+              "$DEFCONFIG"
+
+            if [ "$val" = "n" ]; then
+              echo "# ${key} is not set" >> "$DEFCONFIG"
+              echo "[OFF ] $key"
+            else
+              echo "${key}=${val}" >> "$DEFCONFIG"
+              echo "[ ON ] $key=$val"
+            fi
+          }
+
+          echo "=== BPF / eBPF 网络支持 ==="
+
+          set_config CONFIG_BPF_SYSCALL y
+          set_config CONFIG_CGROUPS y
+          set_config CONFIG_CGROUP_BPF y
+          set_config CONFIG_BPF_JIT y
+          set_config CONFIG_BPF_STREAM_PARSER y
+
+          echo "=== TUN 代理支持 ==="
+
+          set_config CONFIG_TUN y
+
+          echo "=== Netfilter 基础 ==="
+
+          set_config CONFIG_NETFILTER y
+          set_config CONFIG_NETFILTER_ADVANCED y
+          set_config CONFIG_NETFILTER_XTABLES y
+
+          set_config CONFIG_NF_CONNTRACK y
+          set_config CONFIG_NF_CONNTRACK_MARK y
+          set_config CONFIG_NF_NAT y
+
+          echo "=== TPROXY / Socket / Mark ==="
+
+          set_config CONFIG_NETFILTER_XT_TARGET_TPROXY y
+          set_config CONFIG_NETFILTER_XT_MATCH_SOCKET y
+          set_config CONFIG_NETFILTER_XT_MATCH_MARK y
+          set_config CONFIG_NETFILTER_XT_TARGET_MARK y
+          set_config CONFIG_NETFILTER_XT_TARGET_REDIRECT y
+          set_config CONFIG_NETFILTER_XT_MATCH_ADDRTYPE y
+          set_config CONFIG_NETFILTER_XT_MATCH_OWNER y
+          set_config CONFIG_NETFILTER_XT_MATCH_CONNTRACK y
+          set_config CONFIG_NETFILTER_XT_MATCH_MULTIPORT y
+
+          set_config CONFIG_NF_SOCKET_IPV4 y
+          set_config CONFIG_NF_SOCKET_IPV6 y
+          set_config CONFIG_NF_TPROXY_IPV4 y
+          set_config CONFIG_NF_TPROXY_IPV6 y
+
+          echo "=== Policy Routing / FWMark ==="
+
+          set_config CONFIG_IP_ADVANCED_ROUTER y
+          set_config CONFIG_IP_MULTIPLE_TABLES y
+          set_config CONFIG_IP_ROUTE_FWMARK y
+          set_config CONFIG_IPV6_MULTIPLE_TABLES y
+
+          echo "=== IPSet ==="
+
+          set_config CONFIG_IP_SET y
+          set_config CONFIG_IP_SET_MAX 65534
+
+          set_config CONFIG_IP_SET_BITMAP_IP y
+          set_config CONFIG_IP_SET_BITMAP_IPMAC y
+          set_config CONFIG_IP_SET_BITMAP_PORT y
+
+          set_config CONFIG_IP_SET_HASH_IP y
+          set_config CONFIG_IP_SET_HASH_IPMARK y
+          set_config CONFIG_IP_SET_HASH_IPPORT y
+          set_config CONFIG_IP_SET_HASH_IPPORTIP y
+          set_config CONFIG_IP_SET_HASH_IPPORTNET y
+          set_config CONFIG_IP_SET_HASH_IPMAC y
+          set_config CONFIG_IP_SET_HASH_MAC y
+
+          set_config CONFIG_IP_SET_HASH_NET y
+          set_config CONFIG_IP_SET_HASH_NETNET y
+          set_config CONFIG_IP_SET_HASH_NETPORT y
+          set_config CONFIG_IP_SET_HASH_NETPORTNET y
+          set_config CONFIG_IP_SET_HASH_NETIFACE y
+
+          set_config CONFIG_IP_SET_LIST_SET y
+          set_config CONFIG_NETFILTER_XT_SET y
+
+          echo "=== IPv4 NAT ==="
+
+          set_config CONFIG_IP_NF_IPTABLES y
+          set_config CONFIG_IP_NF_FILTER y
+          set_config CONFIG_IP_NF_NAT y
+          set_config CONFIG_IP_NF_TARGET_MASQUERADE y
+
+          echo "=== IPv6 NAT ==="
+
+          set_config CONFIG_IP6_NF_IPTABLES y
+          set_config CONFIG_IP6_NF_FILTER y
+          set_config CONFIG_IP6_NF_NAT y
+          set_config CONFIG_IP6_NF_TARGET_MASQUERADE y
+
+          echo "=== 代理网络优化完成 ==="
+
+          grep -E \
+            'CONFIG_(BPF_|CGROUP_BPF|TUN|IP_SET|NETFILTER|NF_|IP_NF_|IP6_NF_|IP_ADVANCED_ROUTER|IP_MULTIPLE_TABLES|IP_ROUTE_FWMARK|IPV6_MULTIPLE_TABLES)' \
+            "$DEFCONFIG" || true
+
+
+      - name: 编译优化
+        run: |
+          set -euo pipefail
+
+          cd "$CONFIG"
+          DEFCONFIG=./common/arch/arm64/configs/gki_defconfig
+          SYMBOL_INDEX=./.kconfig-symbols
+
+          echo "当前 defconfig 路径: $DEFCONFIG"
+
+          if [ ! -f "$DEFCONFIG" ]; then
+            echo "::error::找不到 defconfig: $DEFCONFIG"
+            exit 1
+          fi
+
+          if [ ! -s "$SYMBOL_INDEX" ]; then
+            find ./common -type f -name 'Kconfig*' \
+              -exec awk '$1=="config" || $1=="menuconfig" {print $2}' {} + \
+              | sort -u > "$SYMBOL_INDEX"
+          fi
+
+          set_config() {
+            local key="$1"
+            local val="$2"
+            local symbol="${key#CONFIG_}"
+
+            if ! grep -qxF "$symbol" "$SYMBOL_INDEX"; then
+              echo "[SKIP] $key 当前内核不存在"
+              return 0
+            fi
+
+            sed -i \
+              -e "/^${key}=.*/d" \
+              -e "/^# ${key} is not set$/d" \
+              "$DEFCONFIG"
+
+            if [ "$val" = "n" ]; then
+              echo "# ${key} is not set" >> "$DEFCONFIG"
+              echo "[OFF ] $key"
+            else
+              echo "${key}=${val}" >> "$DEFCONFIG"
+              echo "[ ON ] $key=$val"
+            fi
+          }
+
+          echo "=== ARM64 编译性能优化 ==="
+
+          set_config CONFIG_CC_OPTIMIZE_FOR_PERFORMANCE y
+          set_config CONFIG_CC_OPTIMIZE_FOR_PERFORMANCE_O3 n
+          set_config CONFIG_CC_OPTIMIZE_FOR_SIZE n
+          set_config CONFIG_OPTIMIZE_INLINING y
+
+          echo "=== LTO 由现有构建流程统一控制 ==="
+          echo "5.x  -> LTO=thin"
+          echo "6.x  -> --lto=thin"
+          echo "6.12 -> --lto=none"
+
+          echo "=== 最终编译优化配置 ==="
+
+          grep -E \
+            'CONFIG_CC_OPTIMIZE_FOR_|CONFIG_OPTIMIZE_INLINING' \
+            "$DEFCONFIG" || true
+
+          echo "=== 编译优化完成 ==="
+
+
+
+
+
       - name: 配置内核选项
         working-directory: ${{ env.KERNEL_ROOT }}
         run: |
